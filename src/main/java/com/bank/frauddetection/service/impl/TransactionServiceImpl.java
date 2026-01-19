@@ -1,5 +1,9 @@
 package com.bank.frauddetection.service.impl;
 
+import java.time.LocalDateTime;
+
+import org.springframework.stereotype.Service;
+
 import com.bank.frauddetection.dto.TransactionRequestDTO;
 import com.bank.frauddetection.dto.TransactionResponseDTO;
 import com.bank.frauddetection.entity.Account;
@@ -10,10 +14,8 @@ import com.bank.frauddetection.repository.TransactionRepository;
 import com.bank.frauddetection.repository.UserRepository;
 import com.bank.frauddetection.service.FraudDetectionService;
 import com.bank.frauddetection.service.TransactionService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +34,14 @@ public class TransactionServiceImpl implements TransactionService {
 
         Account toAccount = accountRepository.findById(request.getToAccount())
                 .orElseThrow(() -> new RuntimeException("Receiver account not found"));
+
+        User user = userRepository.findById(fromAccount.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 🚫 BLOCKED USER CHECK (DAY 9)
+        if ("BLOCKED".equals(user.getStatus())) {
+            return new TransactionResponseDTO("FAILED", "User is blocked");
+        }
 
         if (fromAccount.getBalance() < request.getAmount()) {
             return new TransactionResponseDTO("FAILED", "Insufficient balance");
@@ -55,14 +65,10 @@ public class TransactionServiceImpl implements TransactionService {
 
         transactionRepository.save(transaction);
 
-        // ================================
-        // STEP 7 – FRAUD DETECTION TRIGGER
-        // ================================
-        User user = userRepository.findById(fromAccount.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+        // Fraud detection
         fraudDetectionService.detectFraud(user);
 
         return new TransactionResponseDTO("SUCCESS", "Transaction completed");
     }
+
 }
