@@ -15,6 +15,7 @@ import com.bank.frauddetection.repository.AccountRepository;
 import com.bank.frauddetection.repository.LoginLogRepository;
 import com.bank.frauddetection.repository.UserRepository;
 import com.bank.frauddetection.service.AuthService;
+import com.bank.frauddetection.util.OtpUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +59,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     // =========================
-    // LOGIN + LOGIN LOG TRACKING
+    // LOGIN + FRAUD LOGIC
     // =========================
     @Override
     public String login(LoginRequestDTO request, HttpServletRequest httpRequest) {
@@ -83,22 +84,95 @@ public class AuthServiceImpl implements AuthService {
 
         // WRONG PASSWORD
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+
+            user.setRiskScore(user.getRiskScore() + 10);
+
+            if (user.getRiskScore() >= 50) {
+                user.setStatus("BLOCKED");
+            }
+
+            userRepository.save(user);
+
             log.setSuccess(false);
             loginLogRepository.save(log);
+
             return "Invalid username or password";
         }
 
         // BLOCKED USER
         if ("BLOCKED".equals(user.getStatus())) {
+
+            user.setRiskScore(user.getRiskScore() + 5);
+            userRepository.save(user);
+
             log.setSuccess(false);
             loginLogRepository.save(log);
+
             return "User is blocked";
         }
 
-        // SUCCESS
+        // SUCCESSFUL LOGIN
+        if (user.getRiskScore() < 50) {
+            user.setRiskScore(0);
+            userRepository.save(user);
+        }
+
         log.setSuccess(true);
         loginLogRepository.save(log);
 
         return "Login successful";
+    }
+
+    // =========================
+    // FORGOT PASSWORD - OTP
+    // =========================
+    @Override
+    public String generateOtp(String username) {
+
+        username = username.trim();   // ⭐ IMPORTANT
+
+        Optional<User> userOpt = userRepository.findByUsername(username);
+
+        if (userOpt.isEmpty()) {
+            return "User not found";
+        }
+
+        User user = userOpt.get();
+
+        String otp = OtpUtil.generateOtp();
+
+        user.setOtp(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+
+        userRepository.save(user);
+
+        return "OTP generated: " + otp;
+    }
+
+
+    // =========================
+    // RESET PASSWORD USING OTP
+    // =========================
+    @Override
+    public String resetPassword(String username, String otp, String newPassword) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getOtp() == null || !user.getOtp().equals(otp)) {
+            return "Invalid OTP";
+        }
+
+        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+            return "OTP expired";
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setOtp(null);
+        user.setOtpExpiry(null);
+
+        userRepository.save(user);
+
+        return "Password updated successfully";
     }
 }
