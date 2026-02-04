@@ -1,7 +1,5 @@
 package com.bank.frauddetection.entity;
 
-import java.time.LocalDateTime;
-
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,16 +20,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    private String role;        // USER, ADMIN
-
-    private String status;      // ACTIVE, BLOCKED
-
+    private String role;        // USER / ADMIN
+    private String status;      // ACTIVE / BLOCKED
     private int riskScore;
-
-    // =========================
-    // OTP FOR FORGOT PASSWORD
-    // =========================
-    private String otp;
-
-    private LocalDateTime otpExpiry;
 }

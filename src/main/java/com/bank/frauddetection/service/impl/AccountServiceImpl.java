@@ -15,10 +15,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public double getBalance(Long userId) {
 
-        Account account = accountRepository.findAll()
-                .stream()
-                .filter(a -> a.getUserId().equals(userId))
-                .findFirst()
+        Account account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Account not found"));
 
         return account.getBalance();

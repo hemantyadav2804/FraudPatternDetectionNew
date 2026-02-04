@@ -14,8 +14,6 @@ public class Account {
     private Long id;
 
     private Long userId;
-
     private double balance;
-
     private double dailyLimit;
 }
