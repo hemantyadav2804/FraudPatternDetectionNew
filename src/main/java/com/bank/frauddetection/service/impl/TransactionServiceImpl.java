@@ -29,10 +29,10 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public TransactionResponseDTO transferMoney(TransactionRequestDTO request) {
 
-        Account fromAccount = accountRepository.findById(request.getFromAccount())
+        Account fromAccount = accountRepository.findById(request.getFromAccountId())
                 .orElseThrow(() -> new RuntimeException("Sender account not found"));
 
-        Account toAccount = accountRepository.findById(request.getToAccount())
+        Account toAccount = accountRepository.findById(request.getToAccountId())
                 .orElseThrow(() -> new RuntimeException("Receiver account not found"));
 
         User user = userRepository.findById(fromAccount.getUserId())
