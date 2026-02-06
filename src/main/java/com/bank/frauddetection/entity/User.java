@@ -3,11 +3,14 @@ package com.bank.frauddetection.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
-@Data
+@Table(name = "users")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "users")
 public class User {
 
     @Id
@@ -23,4 +26,10 @@ public class User {
     private String role;        // USER / ADMIN
     private String status;      // ACTIVE / BLOCKED
     private int riskScore;
+
+    // ===== FORGOT PASSWORD =====
+    @Column(length = 6)
+    private String otp;
+
+    private LocalDateTime otpExpiry;
 }

@@ -2,26 +2,33 @@ package com.bank.frauddetection.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Table(name = "transactions")
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "transactions")
 public class Transaction {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long fromAccount;
+    // Sender user ID (for transfer)
+    private Long fromUserId;
 
-    private Long toAccount;
+    // Receiver user ID (for transfer)
+    private Long toUserId;
 
+    // Transaction amount
     private double amount;
 
-    private LocalDateTime timestamp;
+    // DEPOSIT, WITHDRAW, TRANSFER
+    private String type;
 
-    private String status;
+    // Timestamp of transaction
+    private LocalDateTime timestamp;
 }

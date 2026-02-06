@@ -1,21 +1,17 @@
 package com.bank.frauddetection.service.impl;
 
-import java.time.LocalDateTime;
-
-import org.springframework.stereotype.Service;
-
 import com.bank.frauddetection.dto.TransactionRequestDTO;
 import com.bank.frauddetection.dto.TransactionResponseDTO;
 import com.bank.frauddetection.entity.Account;
 import com.bank.frauddetection.entity.Transaction;
-import com.bank.frauddetection.entity.User;
 import com.bank.frauddetection.repository.AccountRepository;
 import com.bank.frauddetection.repository.TransactionRepository;
-import com.bank.frauddetection.repository.UserRepository;
-import com.bank.frauddetection.service.FraudDetectionService;
 import com.bank.frauddetection.service.TransactionService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -23,52 +19,58 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
-    private final UserRepository userRepository;
-    private final FraudDetectionService fraudDetectionService;
 
     @Override
     public TransactionResponseDTO transferMoney(TransactionRequestDTO request) {
 
-        Account fromAccount = accountRepository.findById(request.getFromAccountId())
-                .orElseThrow(() -> new RuntimeException("Sender account not found"));
+        // Fetch sender & receiver accounts
+        Account sender = accountRepository.findByUserId(request.getFromUserId())
+                .orElse(null);
 
-        Account toAccount = accountRepository.findById(request.getToAccountId())
-                .orElseThrow(() -> new RuntimeException("Receiver account not found"));
+        Account receiver = accountRepository.findByUserId(request.getToUserId())
+                .orElse(null);
 
-        User user = userRepository.findById(fromAccount.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // 🚫 BLOCKED USER CHECK (DAY 9)
-        if ("BLOCKED".equals(user.getStatus())) {
-            return new TransactionResponseDTO("FAILED", "User is blocked");
+        if (sender == null || receiver == null) {
+            return new TransactionResponseDTO(
+                    "Invalid sender or receiver",
+                    "FAILED"
+            );
         }
 
-        if (fromAccount.getBalance() < request.getAmount()) {
-            return new TransactionResponseDTO("FAILED", "Insufficient balance");
+        if (request.getAmount() <= 0) {
+            return new TransactionResponseDTO(
+                    "Invalid transfer amount",
+                    "FAILED"
+            );
         }
 
-        // Debit sender
-        fromAccount.setBalance(fromAccount.getBalance() - request.getAmount());
+        if (sender.getBalance() < request.getAmount()) {
+            return new TransactionResponseDTO(
+                    "Insufficient balance",
+                    "FAILED"
+            );
+        }
 
-        // Credit receiver
-        toAccount.setBalance(toAccount.getBalance() + request.getAmount());
+        // Perform transfer
+        sender.setBalance(sender.getBalance() - request.getAmount());
+        receiver.setBalance(receiver.getBalance() + request.getAmount());
 
-        accountRepository.save(fromAccount);
-        accountRepository.save(toAccount);
+        accountRepository.save(sender);
+        accountRepository.save(receiver);
 
-        Transaction transaction = new Transaction();
-        transaction.setFromAccount(fromAccount.getId());
-        transaction.setToAccount(toAccount.getId());
-        transaction.setAmount(request.getAmount());
-        transaction.setTimestamp(LocalDateTime.now());
-        transaction.setStatus("SUCCESS");
+        // Save transaction record
+        Transaction tx = new Transaction();
+        tx.setFromUserId(request.getFromUserId());
+        tx.setToUserId(request.getToUserId());
+        tx.setAmount(request.getAmount());
+        tx.setType("TRANSFER");
+        tx.setTimestamp(LocalDateTime.now());
 
-        transactionRepository.save(transaction);
+        transactionRepository.save(tx);
 
-        // Fraud detection
-        fraudDetectionService.detectFraud(user);
-
-        return new TransactionResponseDTO("SUCCESS", "Transaction completed");
+        return new TransactionResponseDTO(
+                "Transfer successful",
+                "SUCCESS"
+        );
     }
-
 }

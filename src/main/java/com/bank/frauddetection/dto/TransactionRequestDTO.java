@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class TransactionRequestDTO {
 
-    private Long fromAccountId;
-    private Long toAccountId;
+    private Long fromUserId;
+    private Long toUserId;
     private double amount;
 }

@@ -7,6 +7,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class TransactionResponseDTO {
 
-    private String status;
     private String message;
+    private String status;   // SUCCESS / FAILED
 }
