@@ -1,6 +1,14 @@
 package com.bank.frauddetection.service.impl;
 
-import com.bank.frauddetection.dto.*;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.bank.frauddetection.dto.LoginRequestDTO;
+import com.bank.frauddetection.dto.LoginResponseDTO;
+import com.bank.frauddetection.dto.RegisterRequestDTO;
 import com.bank.frauddetection.entity.Account;
 import com.bank.frauddetection.entity.User;
 import com.bank.frauddetection.repository.AccountRepository;
@@ -10,11 +18,6 @@ import com.bank.frauddetection.util.OtpUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -58,7 +61,7 @@ public class AuthServiceImpl implements AuthService {
         Optional<User> userOpt = userRepository.findByUsername(request.getUsername());
 
         if (userOpt.isEmpty()) {
-            return new LoginResponseDTO("Invalid username or password", null, null);
+            return new LoginResponseDTO("Invalid username or password", null, null,null);
         }
 
         User user = userOpt.get();
@@ -73,12 +76,12 @@ public class AuthServiceImpl implements AuthService {
             }
 
             userRepository.save(user);
-            return new LoginResponseDTO("Invalid username or password", null, null);
+            return new LoginResponseDTO("Invalid username or password", null, null,null);
         }
 
         // BLOCKED USER
         if ("BLOCKED".equals(user.getStatus())) {
-            return new LoginResponseDTO("User is blocked", null, null);
+            return new LoginResponseDTO("User is blocked", null, null,null);
         }
 
         // ✅ SUCCESSFUL LOGIN → RESET RISK SCORE
@@ -88,8 +91,10 @@ public class AuthServiceImpl implements AuthService {
         return new LoginResponseDTO(
                 "Login successful",
                 user.getId(),
-                user.getRole()
+                user.getRole(),
+                user.getUsername()
         );
+
     }
 
     // ================= FORGOT PASSWORD =================
