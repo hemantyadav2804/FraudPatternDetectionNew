@@ -10,8 +10,10 @@ import com.bank.frauddetection.dto.LoginRequestDTO;
 import com.bank.frauddetection.dto.LoginResponseDTO;
 import com.bank.frauddetection.dto.RegisterRequestDTO;
 import com.bank.frauddetection.entity.Account;
+import com.bank.frauddetection.entity.LoginLog;
 import com.bank.frauddetection.entity.User;
 import com.bank.frauddetection.repository.AccountRepository;
+import com.bank.frauddetection.repository.LoginLogRepository;
 import com.bank.frauddetection.repository.UserRepository;
 import com.bank.frauddetection.service.AuthService;
 import com.bank.frauddetection.util.OtpUtil;
@@ -26,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
     private final PasswordEncoder passwordEncoder;
+    private final LoginLogRepository loginLogRepository;
 
     // ================= REGISTER =================
     @Override
@@ -58,9 +61,21 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponseDTO login(LoginRequestDTO request, HttpServletRequest httpRequest) {
 
+        String ipAddress = httpRequest.getRemoteAddr();
         Optional<User> userOpt = userRepository.findByUsername(request.getUsername());
 
+        // ❌ USERNAME NOT FOUND
         if (userOpt.isEmpty()) {
+
+            LoginLog log = new LoginLog();
+            log.setUserId(null);
+            log.setIpAddress(ipAddress);
+            log.setLocation("UNKNOWN");
+            log.setLoginTime(LocalDateTime.now());
+            log.setSuccess(false);
+
+            loginLogRepository.save(log);
+
             return new LoginResponseDTO("Invalid username or password", null, null, null);
         }
 
@@ -76,16 +91,44 @@ public class AuthServiceImpl implements AuthService {
             }
 
             userRepository.save(user);
+
+            LoginLog log = new LoginLog();
+            log.setUserId(user.getId());
+            log.setIpAddress(ipAddress);
+            log.setLocation("UNKNOWN");
+            log.setLoginTime(LocalDateTime.now());
+            log.setSuccess(false);
+
+            loginLogRepository.save(log);
+
             return new LoginResponseDTO("Invalid username or password", null, null, null);
         }
 
-        // ❌ BLOCKED USER
+        // ❌ BLOCKED USER ATTEMPT
         if ("BLOCKED".equals(user.getStatus())) {
+
+            LoginLog log = new LoginLog();
+            log.setUserId(user.getId());
+            log.setIpAddress(ipAddress);
+            log.setLocation("UNKNOWN");
+            log.setLoginTime(LocalDateTime.now());
+            log.setSuccess(false);
+
+            loginLogRepository.save(log);
+
             return new LoginResponseDTO("User is blocked", null, null, null);
         }
 
         // ✅ SUCCESSFUL LOGIN
-        // 🚫 DO NOT RESET RISK SCORE HERE
+        LoginLog log = new LoginLog();
+        log.setUserId(user.getId());
+        log.setIpAddress(ipAddress);
+        log.setLocation("UNKNOWN");
+        log.setLoginTime(LocalDateTime.now());
+        log.setSuccess(true);
+
+        loginLogRepository.save(log);
+
         return new LoginResponseDTO(
                 "Login successful",
                 user.getId(),
